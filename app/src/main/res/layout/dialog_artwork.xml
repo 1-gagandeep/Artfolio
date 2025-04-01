@@ -1,0 +1,64 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/ivArtworkPreview"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="centerCrop"
+        android:background="@android:color/darker_gray"/>
+
+    <Button
+        android:id="@+id/btnPickImage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pick Image"
+        android:layout_gravity="center"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/etTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Title (Required)"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/etDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Description (Required)"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/etMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Medium (Required)"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/etStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Style (Required)"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/etTheme"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Theme (Required)"
+        android:layout_marginTop="8dp"/>
+
+    <TextView
+        android:id="@+id/tvImageSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Image Size: Not selected"
+        android:layout_marginTop="8dp"/>
+</LinearLayout>
