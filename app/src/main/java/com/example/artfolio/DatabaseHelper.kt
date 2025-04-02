@@ -11,28 +11,31 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ArtGallery.db"
-        private const val DATABASE_VERSION = 3 // Ensure this is higher than previous versions
+        private const val DATABASE_VERSION = 6
 
         // Table: Artworks
-        private const val TABLE_ARTWORK = "artwork"
-        private const val KEY_ID = "id"
-        private const val KEY_TITLE = "title"
-        private const val KEY_DESCRIPTION = "description"
-        private const val KEY_IMAGE_PATH = "image_path"
-        private const val KEY_MEDIUM = "medium"
-        private const val KEY_STYLE = "style"
-        private const val KEY_THEME = "theme"
-        private const val KEY_IMAGE_WIDTH = "image_width"
-        private const val KEY_IMAGE_HEIGHT = "image_height"
+        const val TABLE_ARTWORK = "artwork"
+        const val KEY_ID = "id"
+        const val KEY_TITLE = "title"
+        const val KEY_DESCRIPTION = "description"
+        const val KEY_IMAGE_PATH = "image_path"
+        const val KEY_MEDIUM = "medium"
+        const val KEY_STYLE = "style"
+        const val KEY_THEME = "theme"
+        const val KEY_IMAGE_WIDTH = "image_width"
+        const val KEY_IMAGE_HEIGHT = "image_height"
+        const val KEY_ARTIST_EMAIL = "artist_email"
 
         // Table: Users
-        private const val TABLE_USERS = "users"
-        private const val COLUMN_USER_ID = "id"
-        private const val COLUMN_FIRSTNAME = "firstname"
-        private const val COLUMN_LASTNAME = "lastname"
-        private const val COLUMN_EMAIL = "email"
-        private const val COLUMN_PASSWORD = "password"
-        private const val COLUMN_PROFILE_IMAGE = "profile_image"
+        const val TABLE_USERS = "users"
+        const val COLUMN_USER_ID = "id"
+        const val COLUMN_FIRSTNAME = "firstname"
+        const val COLUMN_LASTNAME = "lastname"
+        const val COLUMN_EMAIL = "email"
+        const val COLUMN_PASSWORD = "password"
+        const val COLUMN_PROFILE_IMAGE = "profile_image"
+        const val COLUMN_MOBILE_NO = "mobile_no"
+        const val COLUMN_USER_TYPE = "user_type"
 
         private const val TAG = "DatabaseHelper"
     }
@@ -48,7 +51,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $KEY_STYLE TEXT,
                 $KEY_THEME TEXT,
                 $KEY_IMAGE_WIDTH INTEGER,
-                $KEY_IMAGE_HEIGHT INTEGER
+                $KEY_IMAGE_HEIGHT INTEGER,
+                $KEY_ARTIST_EMAIL TEXT
             )
         """.trimIndent()
 
@@ -59,7 +63,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $COLUMN_LASTNAME TEXT,
                 $COLUMN_EMAIL TEXT UNIQUE,
                 $COLUMN_PASSWORD TEXT,
-                $COLUMN_PROFILE_IMAGE TEXT
+                $COLUMN_PROFILE_IMAGE TEXT,
+                $COLUMN_MOBILE_NO TEXT,
+                $COLUMN_USER_TYPE TEXT
             )
         """.trimIndent()
 
@@ -70,21 +76,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.i(TAG, "Upgrading database from version $oldVersion to $newVersion")
-        if (oldVersion < 3) {
-            try {
-                // Add profile_image column if it doesn't exist
-                db.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COLUMN_PROFILE_IMAGE TEXT")
-                Log.i(TAG, "Added $COLUMN_PROFILE_IMAGE column to $TABLE_USERS")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error adding $COLUMN_PROFILE_IMAGE column: ${e.message}")
-            }
-        }
-        // For future upgrades, add more conditions here
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_ARTWORK")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
+        onCreate(db)
     }
 
     /** ======================= CRUD Operations for Artworks ======================= */
 
-    fun addArtwork(artwork: Artwork): Long {
+    fun addArtwork(artwork: ArtworkWithPhone, artistEmail: String): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(KEY_TITLE, artwork.title)
@@ -95,39 +94,68 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(KEY_THEME, artwork.theme)
             put(KEY_IMAGE_WIDTH, artwork.imageWidth)
             put(KEY_IMAGE_HEIGHT, artwork.imageHeight)
+            put(KEY_ARTIST_EMAIL, artistEmail)
         }
-        val id = db.insert(TABLE_ARTWORK, null, values)
-        db.close()
+        val id = try {
+            db.insertOrThrow(TABLE_ARTWORK, null, values)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error inserting artwork: ${e.message}")
+            -1L
+        } finally {
+            db.close()
+        }
+        Log.d(TAG, "Artwork added with ID: $id, Artist: $artistEmail")
         return id
     }
 
-    fun getAllArtworks(): List<Artwork> {
-        val artworks = mutableListOf<Artwork>()
+    fun getArtworks(userType: String, email: String?): List<ArtworkWithPhone> {
+        val artworks = mutableListOf<ArtworkWithPhone>()
         val db = readableDatabase
-        val cursor: Cursor? = db.rawQuery("SELECT * FROM $TABLE_ARTWORK", null)
+        val query = if (userType == "artist" && email != null) {
+            """
+                SELECT a.*, u.$COLUMN_MOBILE_NO 
+                FROM $TABLE_ARTWORK a 
+                LEFT JOIN $TABLE_USERS u ON a.$KEY_ARTIST_EMAIL = u.$COLUMN_EMAIL 
+                WHERE a.$KEY_ARTIST_EMAIL = ?
+            """.trimIndent()
+        } else {
+            """
+                SELECT a.*, u.$COLUMN_MOBILE_NO 
+                FROM $TABLE_ARTWORK a 
+                LEFT JOIN $TABLE_USERS u ON a.$KEY_ARTIST_EMAIL = u.$COLUMN_EMAIL
+            """.trimIndent()
+        }
+        val cursor: Cursor? = if (userType == "artist" && email != null) {
+            db.rawQuery(query, arrayOf(email))
+        } else {
+            db.rawQuery(query, null)
+        }
 
         cursor?.use {
             while (it.moveToNext()) {
-                val artwork = Artwork(
+                val artwork = ArtworkWithPhone(
                     id = it.getInt(it.getColumnIndexOrThrow(KEY_ID)),
-                    title = it.getString(it.getColumnIndexOrThrow(KEY_TITLE)),
-                    description = it.getString(it.getColumnIndexOrThrow(KEY_DESCRIPTION)),
-                    imagePath = it.getString(it.getColumnIndexOrThrow(KEY_IMAGE_PATH)),
-                    medium = it.getString(it.getColumnIndexOrThrow(KEY_MEDIUM)),
-                    style = it.getString(it.getColumnIndexOrThrow(KEY_STYLE)),
-                    theme = it.getString(it.getColumnIndexOrThrow(KEY_THEME)),
+                    title = it.getString(it.getColumnIndexOrThrow(KEY_TITLE)) ?: "",
+                    description = it.getString(it.getColumnIndexOrThrow(KEY_DESCRIPTION)) ?: "",
+                    imagePath = it.getString(it.getColumnIndexOrThrow(KEY_IMAGE_PATH)) ?: "",
+                    medium = it.getString(it.getColumnIndexOrThrow(KEY_MEDIUM)) ?: "",
+                    style = it.getString(it.getColumnIndexOrThrow(KEY_STYLE)) ?: "",
+                    theme = it.getString(it.getColumnIndexOrThrow(KEY_THEME)) ?: "",
                     imageWidth = it.getInt(it.getColumnIndexOrThrow(KEY_IMAGE_WIDTH)),
-                    imageHeight = it.getInt(it.getColumnIndexOrThrow(KEY_IMAGE_HEIGHT))
+                    imageHeight = it.getInt(it.getColumnIndexOrThrow(KEY_IMAGE_HEIGHT)),
+                    artistEmail = it.getString(it.getColumnIndexOrThrow(KEY_ARTIST_EMAIL)) ?: "",
+                    artistPhone = it.getString(it.getColumnIndexOrThrow(COLUMN_MOBILE_NO)) ?: "Not available"
                 )
                 artworks.add(artwork)
             }
         }
         cursor?.close()
         db.close()
+        Log.d(TAG, "Fetched ${artworks.size} artworks for userType: $userType, email: $email")
         return artworks
     }
 
-    fun updateArtwork(artwork: Artwork): Int {
+    fun updateArtwork(artwork: ArtworkWithPhone): Int {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(KEY_TITLE, artwork.title)
@@ -141,6 +169,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
         val rowsAffected = db.update(TABLE_ARTWORK, values, "$KEY_ID = ?", arrayOf(artwork.id.toString()))
         db.close()
+        Log.d(TAG, "Updated artwork ID: ${artwork.id}, Rows affected: $rowsAffected")
         return rowsAffected
     }
 
@@ -148,51 +177,59 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val db = writableDatabase
         val rowsAffected = db.delete(TABLE_ARTWORK, "$KEY_ID = ?", arrayOf(id.toString()))
         db.close()
+        Log.d(TAG, "Deleted artwork ID: $id, Rows affected: $rowsAffected")
         return rowsAffected
     }
 
     /** ======================= User Authentication Methods ======================= */
 
-    fun insertUser(firstname: String, lastname: String, email: String, password: String): Boolean {
-        val db = this.writableDatabase
+    fun insertUser(firstname: String, lastname: String, email: String, password: String, mobileNo: String, userType: String): Boolean {
+        val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_FIRSTNAME, firstname)
             put(COLUMN_LASTNAME, lastname)
             put(COLUMN_EMAIL, email)
             put(COLUMN_PASSWORD, password)
-            put(COLUMN_PROFILE_IMAGE, "") // Initial empty profile image
+            put(COLUMN_PROFILE_IMAGE, "")
+            put(COLUMN_MOBILE_NO, mobileNo)
+            put(COLUMN_USER_TYPE, userType)
         }
-
-        return try {
-            val result = db.insert(TABLE_USERS, null, values)
-            db.close()
-            Log.d(TAG, "User inserted: $firstname $lastname, Email: $email, Result: $result")
-            result != -1L
+        val result = try {
+            db.insertOrThrow(TABLE_USERS, null, values)
         } catch (e: Exception) {
             Log.e(TAG, "Error inserting user: ${e.message}")
-            false
+            -1L
+        } finally {
+            db.close()
         }
+        Log.d(TAG, "User inserted: $firstname $lastname, Email: $email, Mobile: $mobileNo, Type: $userType, Result: $result")
+        return result != -1L
     }
 
-    fun checkUser(email: String, password: String): Triple<Boolean, String?, String?> {
-        val db = this.readableDatabase
-        val query = "SELECT $COLUMN_FIRSTNAME, $COLUMN_LASTNAME, $COLUMN_PROFILE_IMAGE FROM $TABLE_USERS WHERE $COLUMN_EMAIL = ? AND $COLUMN_PASSWORD = ?"
+    fun checkUser(email: String, password: String): Quadruple<Boolean, String?, String?, String?> {
+        val db = readableDatabase
+        val query = """
+            SELECT $COLUMN_FIRSTNAME, $COLUMN_LASTNAME, $COLUMN_PROFILE_IMAGE, $COLUMN_USER_TYPE 
+            FROM $TABLE_USERS 
+            WHERE $COLUMN_EMAIL = ? AND $COLUMN_PASSWORD = ?
+        """.trimIndent()
         val cursor = db.rawQuery(query, arrayOf(email, password))
 
         return if (cursor.moveToFirst()) {
             val firstname = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FIRSTNAME))
             val lastname = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LASTNAME))
             val profileImagePath = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PROFILE_IMAGE))
+            val userType = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_TYPE))
             val username = "$firstname $lastname"
             cursor.close()
             db.close()
-            Log.d(TAG, "User found: $username, Profile Image: $profileImagePath")
-            Triple(true, username, profileImagePath)
+            Log.d(TAG, "User found: $username, Type: $userType")
+            Quadruple(true, username, profileImagePath, userType)
         } else {
             cursor.close()
             db.close()
             Log.d(TAG, "No user found for email: $email")
-            Triple(false, null, null)
+            Quadruple(false, null, null, null)
         }
     }
 
@@ -206,3 +243,24 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         Log.d(TAG, "Profile image updated for $email: $imagePath, Rows affected: $rowsAffected")
     }
 }
+
+data class ArtworkWithPhone(
+    val id: Int = 0,
+    val title: String,
+    val description: String,
+    val imagePath: String,
+    val medium: String,
+    val style: String,
+    val theme: String,
+    val imageWidth: Int,
+    val imageHeight: Int,
+    val artistEmail: String,
+    val artistPhone: String
+)
+
+data class Quadruple<out A, out B, out C, out D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)

@@ -30,12 +30,14 @@ class SigninActivity : AppCompatActivity() {
             val email = etEmail.text.toString().trim()
             val password = etPassword.text.toString().trim()
 
-            val (isValid, username, profileImagePath) = dbHelper.checkUser(email, password)
+
+            val (isValid, username, profileImagePath, userType) = dbHelper.checkUser(email, password)
             if (isValid) {
                 val intent = Intent(this, MainActivity::class.java)
                 intent.putExtra("USERNAME", username)
                 intent.putExtra("PROFILE_IMAGE_PATH", profileImagePath)
-                intent.putExtra("EMAIL", email) // Pass email for MainActivity
+                intent.putExtra("EMAIL", email)
+                intent.putExtra("USER_TYPE", userType)
                 startActivity(intent)
                 finish()
             } else {

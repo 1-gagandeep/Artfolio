@@ -2,11 +2,12 @@ package com.example.artfolio
 
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.io.File
 import java.io.FileOutputStream
@@ -28,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var profileUsername: TextView
     private lateinit var profileImage: ImageView
     private lateinit var sharedPreferences: SharedPreferences
+    private var userType: String? = null
+    private var userEmail: String? = null
 
     private var selectedImageUri: Uri? = null
     private var imageWidth: Int = 0
@@ -51,70 +55,76 @@ class MainActivity : AppCompatActivity() {
         dbHelper = DatabaseHelper(this)
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
-        // Initialize profile views
         profileUsername = findViewById(R.id.profileUsername)
         profileImage = findViewById(R.id.profileImage)
 
-        // Get user data from intent
+        profileImage.outlineProvider = ViewOutlineProvider.BACKGROUND
+        profileImage.clipToOutline = true
+
+        userEmail = intent.getStringExtra("EMAIL")
+        userType = intent.getStringExtra("USER_TYPE")
         val username = intent.getStringExtra("USERNAME")
         val profileImagePath = intent.getStringExtra("PROFILE_IMAGE_PATH")
-        val email = intent.getStringExtra("EMAIL") // Assuming email is passed from SigninActivity
 
-        // Save email to SharedPreferences
-        if (email != null) {
-            sharedPreferences.edit().putString(KEY_EMAIL, email).apply()
+        if (userEmail != null) {
+            sharedPreferences.edit().putString(KEY_EMAIL, userEmail).apply()
         }
 
-        // Set username
         if (username != null) {
             profileUsername.text = username
         } else {
             profileUsername.text = "Guest"
         }
 
-        // Set profile image if available
         if (profileImagePath != null) {
-            Glide.with(this).load(profileImagePath).into(profileImage)
+            Glide.with(this)
+                .load(profileImagePath)
+                .apply(RequestOptions.circleCropTransform())
+                .into(profileImage)
         }
 
-        // Initialize profile image picker
         pickProfileImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
                 val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, it)
                 profileImage.setImageBitmap(bitmap)
                 val newProfileImagePath = saveImageToInternalStorage(it)
-                // Update profile image in database
-                val currentEmail = sharedPreferences.getString(KEY_EMAIL, null)
-                if (currentEmail != null) {
-                    dbHelper.updateProfileImage(currentEmail, newProfileImagePath)
+                if (userEmail != null) {
+                    dbHelper.updateProfileImage(userEmail!!, newProfileImagePath)
                 }
+                profileImage.outlineProvider = ViewOutlineProvider.BACKGROUND
+                profileImage.clipToOutline = true
             }
         }
 
-        // Make profile image clickable
         profileImage.setOnClickListener {
-            pickProfileImageLauncher.launch("image/*")
+            if (userType == "artist") {
+                showArtistDetails(userEmail ?: "")
+            } else {
+                pickProfileImageLauncher.launch("image/*")
+            }
         }
 
-        // Setup RecyclerView
         recyclerView = findViewById<RecyclerView>(R.id.artworkRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         adapter = ArtworkAdapter(
-            onEditClick = { artwork -> showEditDialog(artwork) },
-            onDeleteClick = { artwork -> deleteArtwork(artwork) },
-            onViewClick = { artwork -> showArtworkDetails(artwork) }
+            userType ?: "buyer",
+            onEditClick = { artwork -> if (userType == "artist") showEditDialog(artwork) },
+            onDeleteClick = { artwork -> if (userType == "artist") deleteArtwork(artwork) },
+            onViewClick = { artwork -> showArtworkDetails(artwork) },
+            onBuyClick = { artwork ->
+                Toast.makeText(this, "Purchasing ${artwork.title} - Contact: ${artwork.artistPhone}", Toast.LENGTH_LONG).show()
+                // Add purchase logic here (e.g., start a new activity)
+            }
         )
         recyclerView.adapter = adapter
 
-        // Initialize artwork image picker
         pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
                 selectedImageUri = it
                 val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, it)
                 imageWidth = bitmap.width
                 imageHeight = bitmap.height
-
                 ivPreview.setImageBitmap(bitmap)
                 tvImageSize.text = "Image Size: ${imageWidth}x${imageHeight}px"
             }
@@ -122,13 +132,21 @@ class MainActivity : AppCompatActivity() {
 
         loadArtworks()
 
-        findViewById<FloatingActionButton>(R.id.fabUpload).setOnClickListener {
-            showUploadDialog()
+        val fabUpload = findViewById<FloatingActionButton>(R.id.fabUpload)
+        if (userType == "buyer") {
+            fabUpload.visibility = View.GONE
+        }
+        fabUpload.setOnClickListener {
+            if (userType == "artist") {
+                showUploadDialog()
+            } else {
+                Toast.makeText(this, "Only artists can upload artwork!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun loadArtworks() {
-        val artworks = dbHelper.getAllArtworks()
+        val artworks = dbHelper.getArtworks(userType ?: "buyer", userEmail)
         adapter.submitList(artworks)
     }
 
@@ -168,7 +186,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val imagePath = saveImageToInternalStorage(selectedImageUri!!)
-                val artwork = Artwork(
+                val artwork = ArtworkWithPhone(
                     title = title,
                     description = description,
                     imagePath = imagePath,
@@ -176,9 +194,11 @@ class MainActivity : AppCompatActivity() {
                     style = style,
                     theme = theme,
                     imageWidth = imageWidth,
-                    imageHeight = imageHeight
+                    imageHeight = imageHeight,
+                    artistEmail = userEmail ?: "",
+                    artistPhone = ""
                 )
-                dbHelper.addArtwork(artwork)
+                dbHelper.addArtwork(artwork, userEmail ?: "")
                 loadArtworks()
             }
             .setNegativeButton("Cancel", null)
@@ -187,7 +207,29 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun deleteArtwork(artwork: Artwork) {
+    private fun showArtistDetails(email: String) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT ${DatabaseHelper.COLUMN_MOBILE_NO} FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_EMAIL} = ?",
+            arrayOf(email)
+        )
+        var mobileNo = "Not available"
+        if (cursor.moveToFirst()) {
+            mobileNo = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_MOBILE_NO)) ?: "Not available"
+        }
+        cursor.close()
+
+        AlertDialog.Builder(this)
+            .setTitle("Artist Profile")
+            .setMessage("Mobile Number: $mobileNo")
+            .setPositiveButton("Change Profile Picture") { _, _ ->
+                pickProfileImageLauncher.launch("image/*")
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun deleteArtwork(artwork: ArtworkWithPhone) {
         AlertDialog.Builder(this)
             .setTitle("Delete Artwork")
             .setMessage("Are you sure you want to delete this artwork?")
@@ -199,7 +241,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showArtworkDetails(artwork: Artwork) {
+    private fun showArtworkDetails(artwork: ArtworkWithPhone) {
         val intent = Intent(this, ArtworkDetailActivity::class.java).apply {
             putExtra("IMAGE_PATH", artwork.imagePath)
             putExtra("TITLE", artwork.title)
@@ -208,7 +250,7 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun showEditDialog(artwork: Artwork) {
+    private fun showEditDialog(artwork: ArtworkWithPhone) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_artwork, null)
         val etTitle = dialogView.findViewById<EditText>(R.id.etTitle)
         val etDescription = dialogView.findViewById<EditText>(R.id.etDescription)
