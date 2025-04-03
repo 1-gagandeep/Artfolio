@@ -12,53 +12,62 @@
         android:scaleType="centerCrop"
         android:background="@android:color/darker_gray"/>
 
-    <Button
-        android:id="@+id/btnPickImage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pick Image"
-        android:layout_gravity="center"
-        android:layout_marginTop="8dp"/>
 
-    <EditText
-        android:id="@+id/etTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Title (Required)"
-        android:layout_marginTop="8dp"/>
+        <Button
+                android:id="@+id/btnPickImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pick Image"
+                android:layout_gravity="center" />
 
-    <EditText
-        android:id="@+id/etDescription"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Description (Required)"
-        android:layout_marginTop="8dp"/>
+            <TextView
+                android:id="@+id/tvImageSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp" />
 
-    <EditText
-        android:id="@+id/etMedium"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Medium (Required)"
-        android:layout_marginTop="8dp"/>
+            <EditText
+                android:id="@+id/etTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Title" />
 
-    <EditText
-        android:id="@+id/etStyle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Style (Required)"
-        android:layout_marginTop="8dp"/>
+            <EditText
+                android:id="@+id/etDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Description" />
 
-    <EditText
-        android:id="@+id/etTheme"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Theme (Required)"
-        android:layout_marginTop="8dp"/>
+            <EditText
+                android:id="@+id/etMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Medium" />
 
-    <TextView
-        android:id="@+id/tvImageSize"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Image Size: Not selected"
-        android:layout_marginTop="8dp"/>
-</LinearLayout>
+            <EditText
+                android:id="@+id/etStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Style" />
+
+            <EditText
+                android:id="@+id/etTheme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Theme" />
+
+            <EditText
+                android:id="@+id/etOriginalPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Original Price"
+                android:inputType="numberDecimal" />
+
+            <EditText
+                android:id="@+id/etDiscountedPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Discounted Price"
+                android:inputType="numberDecimal" />
+        </LinearLayout>
+

@@ -26,6 +26,15 @@
                 android:layout_gravity="end"
                 android:padding="8dp">
 
+                <!-- Username -->
+                <TextView
+                    android:id="@+id/profileUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Username"
+                    android:textColor="@color/on_primary"
+                    android:textSize="16sp"/>
+
                 <!-- Profile Picture -->
                 <ImageView
                     android:id="@+id/profileImage"
@@ -35,17 +44,9 @@
                     android:scaleType="centerCrop"
                     android:background="@drawable/circle_background"
                     android:clipToOutline="true"
+                    android:layout_marginStart="5dp"
                     android:clickable="true"
                     android:focusable="true" />
-
-                <!-- Username -->
-                <TextView
-                    android:id="@+id/profileUsername"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Username"
-                    android:textColor="@color/on_primary"
-                    android:textSize="16sp"/>
             </LinearLayout>
 
         </androidx.appcompat.widget.Toolbar>

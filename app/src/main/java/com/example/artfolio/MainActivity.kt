@@ -2,6 +2,7 @@ package com.example.artfolio
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -113,8 +114,7 @@ class MainActivity : AppCompatActivity() {
             onDeleteClick = { artwork -> if (userType == "artist") deleteArtwork(artwork) },
             onViewClick = { artwork -> showArtworkDetails(artwork) },
             onBuyClick = { artwork ->
-                Toast.makeText(this, "Purchasing ${artwork.title} - Contact: ${artwork.artistPhone}", Toast.LENGTH_LONG).show()
-                // Add purchase logic here (e.g., start a new activity)
+                Toast.makeText(this, "Purchasing ${artwork.title} for $${artwork.discountedPrice} - Contact: ${artwork.artistPhone}", Toast.LENGTH_LONG).show()
             }
         )
         recyclerView.adapter = adapter
@@ -159,6 +159,8 @@ class MainActivity : AppCompatActivity() {
         val etMedium = dialogView.findViewById<EditText>(R.id.etMedium)
         val etStyle = dialogView.findViewById<EditText>(R.id.etStyle)
         val etTheme = dialogView.findViewById<EditText>(R.id.etTheme)
+        val etOriginalPrice = dialogView.findViewById<EditText>(R.id.etOriginalPrice)
+        val etDiscountedPrice = dialogView.findViewById<EditText>(R.id.etDiscountedPrice)
         tvImageSize = dialogView.findViewById(R.id.tvImageSize)
 
         selectedImageUri = null
@@ -178,10 +180,13 @@ class MainActivity : AppCompatActivity() {
                 val medium = etMedium.text.toString().trim()
                 val style = etStyle.text.toString().trim()
                 val theme = etTheme.text.toString().trim()
+                val originalPrice = etOriginalPrice.text.toString().toFloatOrNull() ?: 0f
+                val discountedPrice = etDiscountedPrice.text.toString().toFloatOrNull() ?: 0f
 
                 if (title.isEmpty() || description.isEmpty() || medium.isEmpty() ||
-                    style.isEmpty() || theme.isEmpty() || selectedImageUri == null) {
-                    Toast.makeText(this, "All fields and image are required", Toast.LENGTH_SHORT).show()
+                    style.isEmpty() || theme.isEmpty() || selectedImageUri == null ||
+                    originalPrice <= 0 || discountedPrice <= 0 || discountedPrice > originalPrice) {
+                    Toast.makeText(this, "All fields are required, and discounted price must be less than original price", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
 
@@ -196,7 +201,9 @@ class MainActivity : AppCompatActivity() {
                     imageWidth = imageWidth,
                     imageHeight = imageHeight,
                     artistEmail = userEmail ?: "",
-                    artistPhone = ""
+                    artistPhone = "",
+                    originalPrice = originalPrice,
+                    discountedPrice = discountedPrice
                 )
                 dbHelper.addArtwork(artwork, userEmail ?: "")
                 loadArtworks()
@@ -257,6 +264,8 @@ class MainActivity : AppCompatActivity() {
         val etMedium = dialogView.findViewById<EditText>(R.id.etMedium)
         val etStyle = dialogView.findViewById<EditText>(R.id.etStyle)
         val etTheme = dialogView.findViewById<EditText>(R.id.etTheme)
+        val etOriginalPrice = dialogView.findViewById<EditText>(R.id.etOriginalPrice)
+        val etDiscountedPrice = dialogView.findViewById<EditText>(R.id.etDiscountedPrice)
         ivPreview = dialogView.findViewById(R.id.ivArtworkPreview)
         val btnPickImage = dialogView.findViewById<Button>(R.id.btnPickImage)
         tvImageSize = dialogView.findViewById(R.id.tvImageSize)
@@ -266,6 +275,8 @@ class MainActivity : AppCompatActivity() {
         etMedium.setText(artwork.medium)
         etStyle.setText(artwork.style)
         etTheme.setText(artwork.theme)
+        etOriginalPrice.setText(artwork.originalPrice.toString())
+        etDiscountedPrice.setText(artwork.discountedPrice.toString())
 
         Glide.with(this).load(artwork.imagePath).into(ivPreview)
         tvImageSize.text = "Image Size: ${artwork.imageWidth}x${artwork.imageHeight}px"
@@ -283,6 +294,15 @@ class MainActivity : AppCompatActivity() {
                 val updatedMedium = etMedium.text.toString().trim()
                 val updatedStyle = etStyle.text.toString().trim()
                 val updatedTheme = etTheme.text.toString().trim()
+                val updatedOriginalPrice = etOriginalPrice.text.toString().toFloatOrNull() ?: 0f
+                val updatedDiscountedPrice = etDiscountedPrice.text.toString().toFloatOrNull() ?: 0f
+
+                if (updatedTitle.isEmpty() || updatedDescription.isEmpty() || updatedMedium.isEmpty() ||
+                    updatedStyle.isEmpty() || updatedTheme.isEmpty() || updatedOriginalPrice <= 0 ||
+                    updatedDiscountedPrice <= 0 || updatedDiscountedPrice > updatedOriginalPrice) {
+                    Toast.makeText(this, "All fields are required, and discounted price must be less than original price", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
 
                 val updatedImagePath = if (selectedImageUri != null) {
                     saveImageToInternalStorage(selectedImageUri!!)
@@ -296,7 +316,9 @@ class MainActivity : AppCompatActivity() {
                     medium = updatedMedium,
                     style = updatedStyle,
                     theme = updatedTheme,
-                    imagePath = updatedImagePath
+                    imagePath = updatedImagePath,
+                    originalPrice = updatedOriginalPrice,
+                    discountedPrice = updatedDiscountedPrice
                 )
                 dbHelper.updateArtwork(updatedArtwork)
                 loadArtworks()

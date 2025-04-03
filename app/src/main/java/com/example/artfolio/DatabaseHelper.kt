@@ -11,7 +11,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ArtGallery.db"
-        private const val DATABASE_VERSION = 6
+        private const val DATABASE_VERSION = 7 // Incremented to 7 for price columns
 
         // Table: Artworks
         const val TABLE_ARTWORK = "artwork"
@@ -25,6 +25,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val KEY_IMAGE_WIDTH = "image_width"
         const val KEY_IMAGE_HEIGHT = "image_height"
         const val KEY_ARTIST_EMAIL = "artist_email"
+        const val KEY_ORIGINAL_PRICE = "original_price" // New column
+        const val KEY_DISCOUNTED_PRICE = "discounted_price" // New column
 
         // Table: Users
         const val TABLE_USERS = "users"
@@ -52,7 +54,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $KEY_THEME TEXT,
                 $KEY_IMAGE_WIDTH INTEGER,
                 $KEY_IMAGE_HEIGHT INTEGER,
-                $KEY_ARTIST_EMAIL TEXT
+                $KEY_ARTIST_EMAIL TEXT,
+                $KEY_ORIGINAL_PRICE REAL,
+                $KEY_DISCOUNTED_PRICE REAL
             )
         """.trimIndent()
 
@@ -95,6 +99,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(KEY_IMAGE_WIDTH, artwork.imageWidth)
             put(KEY_IMAGE_HEIGHT, artwork.imageHeight)
             put(KEY_ARTIST_EMAIL, artistEmail)
+            put(KEY_ORIGINAL_PRICE, artwork.originalPrice)
+            put(KEY_DISCOUNTED_PRICE, artwork.discountedPrice)
         }
         val id = try {
             db.insertOrThrow(TABLE_ARTWORK, null, values)
@@ -144,7 +150,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                     imageWidth = it.getInt(it.getColumnIndexOrThrow(KEY_IMAGE_WIDTH)),
                     imageHeight = it.getInt(it.getColumnIndexOrThrow(KEY_IMAGE_HEIGHT)),
                     artistEmail = it.getString(it.getColumnIndexOrThrow(KEY_ARTIST_EMAIL)) ?: "",
-                    artistPhone = it.getString(it.getColumnIndexOrThrow(COLUMN_MOBILE_NO)) ?: "Not available"
+                    artistPhone = it.getString(it.getColumnIndexOrThrow(COLUMN_MOBILE_NO)) ?: "Not available",
+                    originalPrice = it.getFloat(it.getColumnIndexOrThrow(KEY_ORIGINAL_PRICE)),
+                    discountedPrice = it.getFloat(it.getColumnIndexOrThrow(KEY_DISCOUNTED_PRICE))
                 )
                 artworks.add(artwork)
             }
@@ -166,6 +174,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(KEY_THEME, artwork.theme)
             put(KEY_IMAGE_WIDTH, artwork.imageWidth)
             put(KEY_IMAGE_HEIGHT, artwork.imageHeight)
+            put(KEY_ORIGINAL_PRICE, artwork.originalPrice)
+            put(KEY_DISCOUNTED_PRICE, artwork.discountedPrice)
         }
         val rowsAffected = db.update(TABLE_ARTWORK, values, "$KEY_ID = ?", arrayOf(artwork.id.toString()))
         db.close()
@@ -255,7 +265,9 @@ data class ArtworkWithPhone(
     val imageWidth: Int,
     val imageHeight: Int,
     val artistEmail: String,
-    val artistPhone: String
+    val artistPhone: String,
+    val originalPrice: Float = 0f, // New field
+    val discountedPrice: Float = 0f // New field
 )
 
 data class Quadruple<out A, out B, out C, out D>(
