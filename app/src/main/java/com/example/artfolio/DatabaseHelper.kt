@@ -153,15 +153,15 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val db = readableDatabase
         val query = if (userType == "artist" && email != null) {
             """
-                SELECT a.*, u.$COLUMN_MOBILE_NO 
-                FROM $TABLE_ARTWORK a 
-                LEFT JOIN $TABLE_USERS u ON a.$KEY_ARTIST_EMAIL = u.$COLUMN_EMAIL 
+                SELECT a.*, u.$COLUMN_MOBILE_NO
+                FROM $TABLE_ARTWORK a
+                LEFT JOIN $TABLE_USERS u ON a.$KEY_ARTIST_EMAIL = u.$COLUMN_EMAIL
                 WHERE a.$KEY_ARTIST_EMAIL = ?
             """.trimIndent()
         } else {
             """
-                SELECT a.*, u.$COLUMN_MOBILE_NO 
-                FROM $TABLE_ARTWORK a 
+                SELECT a.*, u.$COLUMN_MOBILE_NO
+                FROM $TABLE_ARTWORK a
                 LEFT JOIN $TABLE_USERS u ON a.$KEY_ARTIST_EMAIL = u.$COLUMN_EMAIL
             """.trimIndent()
         }
@@ -258,9 +258,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val sales = mutableListOf<ArtworkWithPhone>()
         val db = readableDatabase
         val query = """
-            SELECT a.* 
-            FROM $TABLE_ARTWORK a 
-            INNER JOIN $TABLE_PURCHASES p ON a.$KEY_ID = p.$PURCHASE_ARTWORK_ID 
+            SELECT a.*
+            FROM $TABLE_ARTWORK a
+            INNER JOIN $TABLE_PURCHASES p ON a.$KEY_ID = p.$PURCHASE_ARTWORK_ID
             WHERE a.$KEY_ARTIST_EMAIL = ?
         """.trimIndent()
         val cursor = db.rawQuery(query, arrayOf(artistEmail))
@@ -313,9 +313,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val wishlist = mutableListOf<ArtworkWithPhone>()
         val db = readableDatabase
         val query = """
-            SELECT a.* 
-            FROM $TABLE_ARTWORK a 
-            INNER JOIN $TABLE_WISHLIST w ON a.$KEY_ID = w.$WISHLIST_ARTWORK_ID 
+            SELECT a.*
+            FROM $TABLE_ARTWORK a
+            INNER JOIN $TABLE_WISHLIST w ON a.$KEY_ID = w.$WISHLIST_ARTWORK_ID
             WHERE w.$WISHLIST_BUYER_EMAIL = ?
         """.trimIndent()
         val cursor = db.rawQuery(query, arrayOf(buyerEmail))
@@ -362,9 +362,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val purchases = mutableListOf<ArtworkWithPhone>()
         val db = readableDatabase
         val query = """
-            SELECT a.* 
-            FROM $TABLE_ARTWORK a 
-            INNER JOIN $TABLE_PURCHASES p ON a.$KEY_ID = p.$PURCHASE_ARTWORK_ID 
+            SELECT a.*
+            FROM $TABLE_ARTWORK a
+            INNER JOIN $TABLE_PURCHASES p ON a.$KEY_ID = p.$PURCHASE_ARTWORK_ID
             WHERE p.$PURCHASE_BUYER_EMAIL = ?
         """.trimIndent()
         val cursor = db.rawQuery(query, arrayOf(buyerEmail))
@@ -416,8 +416,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     fun checkUser(email: String, password: String): Quadruple<Boolean, String?, String?, String?> {
         val db = readableDatabase
         val query = """
-            SELECT $COLUMN_FIRSTNAME, $COLUMN_LASTNAME, $COLUMN_PROFILE_IMAGE, $COLUMN_USER_TYPE 
-            FROM $TABLE_USERS 
+            SELECT $COLUMN_FIRSTNAME, $COLUMN_LASTNAME, $COLUMN_PROFILE_IMAGE, $COLUMN_USER_TYPE
+            FROM $TABLE_USERS
             WHERE $COLUMN_EMAIL = ? AND $COLUMN_PASSWORD = ?
         """.trimIndent()
         val cursor = db.rawQuery(query, arrayOf(email, password))
